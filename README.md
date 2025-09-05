@@ -1,4 +1,4 @@
-# 🌍 LLM Machine Translation — DE↔EN (WIP)
+# 🌍 Euro Machine Translation (WIP)
 
 ![status](https://img.shields.io/badge/status-WIP-orange?style=flat-square)
 ![model](https://img.shields.io/badge/model-Qwen2.5_1.5B_base-blueviolet?style=flat-square)
