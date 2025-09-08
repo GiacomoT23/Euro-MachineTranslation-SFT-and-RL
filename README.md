@@ -2,66 +2,78 @@
 
 ![status](https://img.shields.io/badge/status-WIP-orange?style=flat-square)
 ![model](https://img.shields.io/badge/model-Qwen2.5_1.5B_base-blueviolet?style=flat-square)
-![compute](https://img.shields.io/badge/compute-Colab_free-lightgrey?style=flat-square)
+![compute](https://img.shields.io/badge/compute-Colab-lightgrey?style=flat-square)
 
-A lightweight, reproducible exploration of **machine translation** with a **small LLM** under limited compute.  
-Inspired by the **WMT General Translation Task**, focusing initially on **German–English (WMT14 subset)** with plans to extend to other European languages.
+Reproducible MT experiments with a **compact LLM** under limited compute.  
+Initial focus on **German→English (WMT14)**, with plans to extend to other European language pairs.
 
-**Phase 1:** instruction-based supervised fine-tuning (**SFT**) on DE→EN and EN→DE pairs.  
-**Phase 2:** reinforcement learning alignment (**GRPO**) to compare against SFT-only baselines.  
-
----
-
-## 🎯 Motivation & Scope
-
-- **Why Qwen2.5 (1.5B)**: small enough to fit free Colab VRAM, while still capable of MT with fine-tuning.  
-- **Why DE↔EN (WMT14 subset)**: classic language pair with strong baselines and abundant reference material.  
-- **Why SFT first**: establish a baseline with prompt-based fine-tuning.  
-- **Why GRPO next**: test whether lightweight RL improves adequacy/fluency beyond SFT under the same resource limits.  
+**Phase 1:** instruction-style **SFT** with translation prompts.  
+**Phase 2:** **GRPO** (RL) to compare against the SFT baseline under the same constraints.
 
 ---
 
-## 📝 Prompting Strategy (SFT)
+## 🎯 Goals
 
-Each training example is formatted with a brief translation instruction, followed by source/target fields.
-
----
-
-## 🧪 Plan
-
-### Phase 1 — Supervised Fine-Tuning (SFT)
-- **Model**: Qwen2.5 1.5B (base)  
-- **Data**: WMT14 DE↔EN subset (train/val split; dev/test for evaluation)  
-- **Training**: LoRA/QLoRA (4-bit), mixed precision, gradient accumulation  
-- **Evaluation**: translation quality measured with **COMET** + qualitative error analysis  
-
-### Phase 2 — RL with GRPO (Planned)
-- **Goal**: explore alignment beyond SFT  
-- **Reward signal**: sentence-level COMET or hybrid scoring  
-- **Comparison**: SFT baseline vs. SFT+GRPO on the same test split  
+- **Model:** Qwen2.5 1.5B (base) — small enough for Colab.
+- **Data:** WMT14 (DE↔EN) — standard, comparable, and well-known.
+- **Method:** build a solid SFT baseline → then add GRPO with automatic rewards.
+- **Constraint:** keep it feasible on “consumer/free” GPUs and reasonable wall time.
 
 ---
 
-## 🧰 Tech Stack
+## ✅ What’s implemented so far
 
-- **Core**: Python · PyTorch · Hugging Face (Transformers, TRL, Datasets, PEFT, bitsandbytes)  
-- **Runtime**: Google Colab (free tier), mixed precision + gradient accumulation  
-- **Logging & configs**: Weights & Biases (wandb) for tracking, YAML/JSON for hyper-params  
+### 1) Data prep & cleaning
+- Downloaded **WMT14 DE–EN** and ran **exploration** (length stats & distributions).
+- **Language ID (fastText lid218e):** threshold sweep with **keep-rate** curves to pick a sensible cutoff. This is to ensure a good confidence in the src language being German and the target language being English.
+- **Semantic alignment:** cosine similarity on samples (encoder: `intfloat/multilingual-e5-small`) to set a data-quality threshold.
+- **Training-set filters** (dev/test kept **untouched** for fair evaluation):
+  - **Length cap:** `len(src)+len(tgt) ≤ 203` (99 percentile of the distribution).
+  - **Length ratio (tokens) between src and tgt:** interval configurable; explored 0.5–2, 0.33–3, 0.25–4.
+  - **LID:** `P(src=deu_Latn) ≥ 0.99` and `P(tgt=eng_Latn) ≥ 0.99`.
+  - **Cosine:** `cos(src,tgt) ≥ 0.88`.
+- **Training sample:** built a **100k**-example train set and then filtered (remaining around 63 k); **validation/test are the original WMT14 splits** for comparability.
+
+### 2) SFT pipeline
+- Instruction-style **Source/Translation** prompt format.
+- SFT with **TRL + Unsloth (QLoRA)** on Qwen2.5-1.5B.
+- **Weights & Biases (W&B)** logging, **early stopping**, and **best checkpoint** exported to Drive.
+- In-loop evaluation with **validation loss**.
+
+> **Note:** exact training hyperparameters (LR/scheduler/batch, etc.) are **intentionally not fixed here** as they’re still under exploration.
 
 ---
 
-## 📐 Training Recipe (SFT — pilot)
+## 🧪 Experimental plan
 
-- **Quantization**: 4-bit QLoRA (fallback: LoRA)  
-- **Batching**: small micro-batches + gradient accumulation  
-- **Scheduler**: linear with warmup; early stop on val  
-- **Tokenizer**: model’s native tokenizer with consistent punctuation/casing normalization  
+### Phase 1 — SFT (ongoing)
+- Goal: establish a solid DE→EN baseline.
+- Metrics: **COMET** for final reports.
+- Checkpointing: best model saved.
+
+### Phase 2 — RL with GRPO (next)
+- Reward: sentence-level COMET or a hybrid (fluency/adequacy).
+- Setup: same dev/test to compare fairly with the SFT baseline.
 
 ---
 
-## 📏 Evaluation Plan
+## 🧰 Stack
 
-- **Metrics**: COMET (main), with secondary BLEU/chrF for comparison  
-- **Qualitative**: inspect typical errors (idioms, named entities, coverage)  
-- **Efficiency**: log runtime per epoch, VRAM usage, tokens/sec  
-- **Reporting**: short **result card** per run (data, config, metrics, sample outputs)  
+- **HF:** Transformers · TRL · Datasets · PEFT · bitsandbytes  
+- **Modeling:** QLoRA (4-bit), Unsloth  
+- **Embeddings:** `intfloat/multilingual-e5-small` (semantic similarity)  
+- **LID:** fastText lid218e  
+- **Eval:** sacreBLEU/chrF (subset in-loop), **COMET** for final evaluation  
+- **Tracking:** Weights & Biases (W&B)  
+- **Runtime:** Google Colab
+
+---
+
+## 📂 Structure & reproducibility
+
+- `de-en_preprocessing.ipynb` — **download, exploration, filtering, save to Arrow** (Drive)  
+- `de-en_SFT.ipynb` — **load dataset, prompt formatting, SFT**, W&B, early stopping, **export best checkpoint**
+
+---
+
+> This repository is **work in progress**. We’ll keep updating it with results, notes, and emerging best practices.
