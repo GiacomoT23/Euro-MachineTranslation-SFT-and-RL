@@ -94,6 +94,18 @@ I fine-tune **Qwen2.5-3B** (base) for **German → English** translation using i
 
 ---
 
+## 📈 Current Results
+
+| Split | Metric                      |   Value   |
+|-----:|:----------------------------|:---------:|
+| test | COMET `wmt22-da` (system)   |  0.842133 |
+
+This is the current result for Qwen2.5-3B SFT on WMT14 DE→EN.  
+Next steps: assess whether **GRPO** can further improve quality, then **extend to multiple languages**.
+
+---
+
+
 ## 🧰 Stack & Versions
 
 **Preprocessing**
@@ -140,15 +152,5 @@ I fine-tune **Qwen2.5-3B** (base) for **German → English** translation using i
 
 ---
 
-## 📈 Current Results
-
-| Split | Metric                      |   Value   |
-|-----:|:----------------------------|:---------:|
-| test | COMET `wmt22-da` (system)   |  0.842133 |
-
-This is the current result for Qwen2.5-3B SFT on WMT14 DE→EN.  
-Next steps: assess whether **GRPO** can further improve quality, then **extend to multiple languages**.
-
----
 
 > This repository is a **work in progress**. Results, configs, and best practices will evolve as experiments progress.
